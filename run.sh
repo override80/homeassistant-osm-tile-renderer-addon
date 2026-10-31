@@ -79,15 +79,40 @@ LAT_MAX=$(awk -v lat="$HOME_LAT" -v r="$RADIUS_KM" 'BEGIN{printf "%.6f", lat + r
 LON_MIN=$(awk -v lat="$HOME_LAT" -v lon="$HOME_LON" -v r="$RADIUS_KM" 'BEGIN{pi=atan2(0,-1); rad=lat*pi/180; printf "%.6f", lon - r/(111.32*cos(rad))}')
 LON_MAX=$(awk -v lat="$HOME_LAT" -v lon="$HOME_LON" -v r="$RADIUS_KM" 'BEGIN{pi=atan2(0,-1); rad=lat*pi/180; printf "%.6f", lon + r/(111.32*cos(rad))}')
 
+# This build's render_list only accepts numeric tile x/y bounds (-x/-X/-y/-Y), not
+# lat/lon (-g/-G/-w/-W is a newer mod_tile feature this packaged version lacks --
+# passing it is silently ignored after an "invalid option" warning, which left -a
+# with no bounds at all, i.e. the whole planet). x/y bounds also differ per zoom
+# level, so render_list has to be invoked once per zoom with that zoom's own range.
+lonlat_to_tile() {
+  # prints "x y" for a given lon, lat, zoom using the standard slippy-map formula
+  awk -v lon="$1" -v lat="$2" -v z="$3" 'BEGIN{
+    pi = atan2(0, -1)
+    n = 1; for (i = 0; i < z; i++) n *= 2
+    latr = lat * pi / 180
+    x = int((lon + 180) / 360 * n)
+    y = int((1 - log(sin(latr)/cos(latr) + 1/cos(latr)) / pi) / 2 * n)
+    print x, y
+  }'
+}
+
 echo "=== Seeding zoom ${MIN_ZOOM}-${MAX_ZOOM} for bbox lat[${LAT_MIN},${LAT_MAX}] lon[${LON_MIN},${LON_MAX}] ==="
-render_list -a \
-  -z "$MIN_ZOOM" -Z "$MAX_ZOOM" \
-  -g "$LAT_MIN" -G "$LAT_MAX" \
-  -w "$LON_MIN" -W "$LON_MAX" \
-  -n "$THREADS" \
-  -s /run/renderd/renderd.sock \
-  -t /data/tiles \
-  -m default
+for ((zoom = MIN_ZOOM; zoom <= MAX_ZOOM; zoom++)); do
+  read -r X1 Y1 <<< "$(lonlat_to_tile "$LON_MIN" "$LAT_MAX" "$zoom")"
+  read -r X2 Y2 <<< "$(lonlat_to_tile "$LON_MAX" "$LAT_MIN" "$zoom")"
+  MINX=$((X1 < X2 ? X1 : X2)); MAXX=$((X1 > X2 ? X1 : X2))
+  MINY=$((Y1 < Y2 ? Y1 : Y2)); MAXY=$((Y1 > Y2 ? Y1 : Y2))
+  N_TILES=$(((MAXX - MINX + 1) * (MAXY - MINY + 1)))
+  echo "--- zoom $zoom: x[$MINX-$MAXX] y[$MINY-$MAXY] = $N_TILES tiles ---"
+  render_list -a \
+    -z "$zoom" -Z "$zoom" \
+    -x "$MINX" -X "$MAXX" \
+    -y "$MINY" -Y "$MAXY" \
+    -n "$THREADS" \
+    -s /run/renderd/renderd.sock \
+    -t /data/tiles \
+    -m default
+done
 
 echo "=== Seeding complete ==="
 touch "$SHARE_DIR/seed-complete"

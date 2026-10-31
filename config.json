@@ -1,6 +1,6 @@
 {
   "name": "OSM Tile Renderer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "slug": "osm-tile-renderer",
   "description": "One-shot job: imports an OpenStreetMap extract and pre-renders a static tile cache for a radius around a given point, for osm-tile-server to serve",
   "url": "https://github.com/override80/homeassistant-osm-tile-renderer-addon",
