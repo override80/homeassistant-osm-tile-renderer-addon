@@ -1,0 +1,30 @@
+{
+  "name": "OSM Tile Renderer",
+  "version": "1.0.0",
+  "slug": "osm-tile-renderer",
+  "description": "One-shot job: imports an OpenStreetMap extract and pre-renders a static tile cache for a radius around a given point, for osm-tile-server to serve",
+  "url": "https://github.com/override80/homeassistant-osm-tile-renderer-addon",
+  "arch": ["amd64"],
+  "startup": "once",
+  "boot": "manual",
+  "init": false,
+  "map": ["share:rw"],
+  "options": {
+    "pbf_url": "",
+    "home_latitude": 45.8312046,
+    "home_longitude": 8.7331394,
+    "radius_km": 50,
+    "min_zoom": 10,
+    "max_zoom": 17,
+    "threads": 4
+  },
+  "schema": {
+    "pbf_url": "str?",
+    "home_latitude": "float",
+    "home_longitude": "float",
+    "radius_km": "int(1,500)",
+    "min_zoom": "int(0,20)",
+    "max_zoom": "int(0,20)",
+    "threads": "int(1,16)"
+  }
+}
