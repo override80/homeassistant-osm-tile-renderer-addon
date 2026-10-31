@@ -16,6 +16,11 @@ THREADS=$(jq -r '.threads' "$CONFIG_PATH")
 
 SHARE_DIR=/share/osm-tiles
 mkdir -p "$SHARE_DIR/database" "$SHARE_DIR/style" "$SHARE_DIR/tiles"
+# renderd runs as the unprivileged "renderer" user (upstream's own run.sh re-chowns
+# the postgres subdirectory to postgres:postgres on every "import"/"run", so this
+# broad chown doesn't fight that -- it only matters for style/ and tiles/, which
+# renderd and the carto build step need to write as "renderer").
+chown -R renderer:renderer "$SHARE_DIR"
 
 # /data itself is a bind mount from Supervisor and can't be replaced, but the
 # database/style/tiles directories under it are plain dirs baked into the image --
